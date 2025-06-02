@@ -1501,6 +1501,12 @@
             });
         }
         
+        // Fungsi untuk mendapatkan nama hari dalam Bahasa Indonesia
+        function getDayName(date) {
+            const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            return days[date.getDay()];
+        }
+        
         // Fungsi untuk membuat tabel shalat
         function renderPrayerTable(filteredDates = null) {
             const tableBody = document.getElementById('prayerTableBody');
@@ -1518,7 +1524,14 @@
                 // Tambahkan kolom tanggal
                 const dateCell = document.createElement('td');
                 dateCell.className = 'date-column';
-                dateCell.textContent = dateString;
+                
+                // Dapatkan nama hari
+                const date = parseDate(dateString);
+                const dayName = getDayName(date);
+                
+                // Tambahkan tanggal dan nama hari
+                dateCell.innerHTML = `${dateString} <span style="color: var(--primary); font-size: 0.8em;">(${dayName})</span>`;
+                
                 row.appendChild(dateCell);
                 
                 // Tambahkan kolom untuk setiap shalat
