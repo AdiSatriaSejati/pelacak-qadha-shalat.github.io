@@ -1,0 +1,2763 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pelacak Qadha Shalat</title>
+    <!-- Tambahkan library Chart.js dan jsPDF via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        :root {
+            --primary: #4CAF50;
+            --primary-dark: #388E3C;
+            --secondary: #2196F3;
+            --light: #f5f5f5;
+            --dark: #333;
+            --danger: #F44336;
+            --warning: #FFC107;
+            --success: #8BC34A;
+            --valid-time: rgba(139, 195, 74, 0.2);
+            --invalid-time: rgba(244, 67, 54, 0.1);
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            color: var(--dark);
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        h1 {
+            color: var(--primary-dark);
+            margin-bottom: 10px;
+        }
+        
+        .date-info {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: var(--light);
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+        }
+        
+        .search-container {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        input[type="text"], select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 100%;
+            font-size: 16px;
+        }
+        
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .btn-secondary {
+            background-color: var(--secondary);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #1976D2;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-title {
+            font-weight: bold;
+            color: var(--dark);
+            margin-bottom: 10px;
+        }
+        
+        .progress-container {
+            height: 15px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background-color: var(--primary);
+            border-radius: 10px;
+            transition: width 0.5s;
+        }
+        
+        .prayer-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .prayer-table th, .prayer-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .prayer-table th {
+            background-color: var(--primary);
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+        
+        .prayer-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .prayer-table tr:hover {
+            background-color: #f1f1f1;
+        }
+        
+        .prayer-table input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .table-container {
+            max-height: 500px;
+            overflow-y: auto;
+            margin-bottom: 30px;
+        }
+        
+        .completed-row {
+            background-color: rgba(139, 195, 74, 0.1) !important;
+        }
+        
+        .date-column {
+            font-weight: bold;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+        }
+        
+        /* Gaya untuk tab dan konten tab */
+        .tab-container {
+            margin-top: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+        
+        .tab-button {
+            background-color: #f8f9fa;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 14px;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+        
+        .tab-button:hover {
+            background-color: #e9ecef;
+        }
+        
+        .tab-button.active {
+            background-color: var(--primary);
+            color: white;
+            border-bottom: 2px solid var(--primary-dark);
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 15px;
+            background-color: white;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Gaya untuk log aktivitas */
+        .activity-log {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: var(--light);
+            border-radius: 8px;
+        }
+        
+        .log-entry {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 10px;
+        }
+        
+        .log-date {
+            font-weight: bold;
+            color: var(--dark);
+        }
+        
+        .log-details {
+            color: #555;
+            margin-top: 5px;
+        }
+        
+        /* Gaya untuk chart */
+        .chart-container {
+            position: relative;
+            margin: auto;
+            height: 300px;
+            width: 100%;
+            max-width: 500px;
+        }
+        
+        /* Gaya untuk tombol export dan import */
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .btn-export {
+            background-color: var(--secondary);
+            color: white;
+        }
+        
+        .btn-export:hover {
+            background-color: #1976D2;
+        }
+        
+        .btn-import {
+            background-color: var(--warning);
+            color: white;
+        }
+        
+        .btn-import:hover {
+            background-color: #FFA000;
+        }
+        
+        .upload-container {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: var(--light);
+            border-radius: 5px;
+        }
+        
+        .alert {
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .alert-success {
+            background-color: rgba(139, 195, 74, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+        
+        .alert-error {
+            background-color: rgba(244, 67, 54, 0.2);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+        
+        /* Gaya untuk weekly stats */
+        .weekly-stats {
+            padding: 15px;
+            background-color: var(--light);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 18px;
+        }
+        
+        .weekly-stats .count {
+            font-weight: bold;
+            color: var(--primary-dark);
+            font-size: 24px;
+        }
+        
+        .prayer-time-info {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: var(--light);
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        
+        .prayer-time-card {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: var(--valid-time);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .time-slot {
+            padding: 8px 12px;
+            border-radius: 5px;
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .valid-time {
+            background-color: var(--valid-time);
+            border-left: 3px solid var(--success);
+        }
+        
+        .invalid-time {
+            background-color: var(--invalid-time);
+            border-left: 3px solid var(--danger);
+        }
+        
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .tooltip .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #555 transparent transparent transparent;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .location-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .current-time {
+            font-weight: bold;
+            color: var(--secondary);
+        }
+        
+        .btn-location {
+            background-color: var(--secondary);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            border: none;
+        }
+        
+        /* Responsive styling */
+        @media screen and (max-width: 768px) {
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .prayer-table th, .prayer-table td {
+                padding: 8px 10px;
+                font-size: 14px;
+            }
+            
+            .prayer-table .prayer-column {
+                padding: 8px 5px;
+            }
+            
+            .filters {
+                flex-direction: column;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+        }
+        
+        /* Tambahkan CSS untuk modal niat sholat qadha */
+        .prayer-intention-btn {
+            background-color: var(--primary-dark);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 15px;
+            width: 100%;
+        }
+        
+        .prayer-intention-icon {
+            font-size: 18px;
+        }
+        
+        /* Modal styling */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            overflow: auto;
+        }
+        
+        .modal-content {
+            position: relative;
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            max-width: 700px;
+            animation: modalFadeIn 0.3s;
+        }
+        
+        @keyframes modalFadeIn {
+            from {opacity: 0; transform: translateY(-20px);}
+            to {opacity: 1; transform: translateY(0);}
+        }
+        
+        .close-modal {
+            position: absolute;
+            right: 15px;
+            top: 10px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .close-modal:hover {
+            color: var(--dark);
+        }
+        
+        .modal-header {
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .modal-header h2 {
+            color: var(--primary-dark);
+            margin: 0;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .intention-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+        
+        .intention-tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+            background-color: #f8f9fa;
+        }
+        
+        .intention-tab:hover {
+            background-color: #e9ecef;
+        }
+        
+        .intention-tab.active {
+            background-color: var(--primary);
+            color: white;
+            border-bottom: 2px solid var(--primary-dark);
+        }
+        
+        .intention-content {
+            display: none;
+            padding: 15px;
+            background-color: var(--light);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .intention-content.active {
+            display: block;
+        }
+        
+        .arabic-text {
+            font-family: "Traditional Arabic", "Scheherazade New", serif;
+            font-size: 26px;
+            line-height: 1.8;
+            text-align: right;
+            direction: rtl;
+            margin-bottom: 10px;
+            color: var(--dark);
+        }
+        
+        .latin-text {
+            font-style: italic;
+            margin-bottom: 10px;
+            color: var(--secondary);
+        }
+        
+        .translation-text {
+            color: #555;
+        }
+        
+        .intention-icon {
+            color: var(--primary);
+            font-size: 20px;
+            margin-right: 8px;
+        }
+        
+        .intention-section {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .intention-section h3 {
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+        }
+        
+        /* Responsive styling for modal */
+        @media screen and (max-width: 768px) {
+            .modal-content {
+                margin: 20% auto;
+                width: 90%;
+                padding: 15px;
+            }
+            
+            .intention-tab {
+                padding: 8px 10px;
+                font-size: 14px;
+            }
+            
+            .arabic-text {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Pelacak Qadha Shalat</h1>
+            <p>Aplikasi untuk mencatat dan melacak qadha shalat lima waktu</p>
+        </header>
+        
+        <div class="date-info">
+            <h2>Informasi Rentang Waktu</h2>
+            <p>Tanggal Lahir: 15 Desember 1999</p>
+            <p>Tanggal Akhir: 15 Desember 2025</p>
+            <p>Total Hari: <span id="totalDays">0</span></p>
+            <p>Total Shalat: <span id="totalPrayers">0</span></p>
+        </div>
+        
+        <div class="prayer-time-info">
+            <h2>Waktu Sah Untuk Qadha</h2>
+            <div class="location-info">
+                <span>Lokasi: <span id="userLocation">Mendeteksi...</span></span>
+                <button class="btn-location" id="refreshLocation">Perbarui Lokasi</button>
+            </div>
+            <p>Tanggal: <span id="currentDate">-</span> | Waktu Sekarang: <span id="currentTime" class="current-time">-</span></p>
+            <p>Status Saat Ini: <span id="currentStatus">-</span></p>
+            <div class="prayer-time-card" id="validTimesContainer">
+                <p>Memuat waktu shalat...</p>
+            </div>
+            
+            <!-- Tombol untuk menampilkan niat sholat qadha -->
+            <button class="btn prayer-intention-btn" id="showIntentionModal">
+                <span class="prayer-intention-icon">☪</span> Lihat Niat Sholat Qadha
+            </button>
+        </div>
+        
+        <!-- Modal untuk niat sholat qadha -->
+        <div id="intentionModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal" id="closeIntentionModal">&times;</span>
+                <div class="modal-header">
+                    <h2><span class="prayer-intention-icon">☪</span> Niat Sholat Qadha</h2>
+                </div>
+                
+                <div class="intention-tabs">
+                    <div class="intention-tab active" data-intention="shubuh">Shubuh</div>
+                    <div class="intention-tab" data-intention="dzuhur">Dzuhur</div>
+                    <div class="intention-tab" data-intention="ashar">Ashar</div>
+                    <div class="intention-tab" data-intention="maghrib">Maghrib</div>
+                    <div class="intention-tab" data-intention="isya">Isya</div>
+                </div>
+                
+                <div id="shubuhIntention" class="intention-content active">
+                    <div class="intention-section">
+                        <h3><span class="intention-icon">📖</span> Niat Sholat Qadha Shubuh (2 rakaat)</h3>
+                        <div class="arabic-text">نَوَيْتُ قَضَاءَ صَلَاةِ الصُّبْحِ رَكْعَتَيْنِ لِلّٰهِ تَعَالٰى</div>
+                        <div class="latin-text">Nawaitu qadha shalata shubhi rak'ataini lillaahi ta'aalaa</div>
+                        <div class="translation-text">Saya niat mengqadha sholat Shubuh dua rakaat karena Allah Ta'ala</div>
+                    </div>
+                    <div class="intention-section">
+                        <h3><span class="intention-icon">🕌</span> Catatan</h3>
+                        <p>Sholat Shubuh terdiri dari 2 rakaat. Dilakukan dengan tenang dan khusyuk seperti sholat pada waktunya.</p>
+                    </div>
+                </div>
+                
+                <div id="dzuhurIntention" class="intention-content">
+                    <div class="intention-section">
+                        <h3><span class="intention-icon">📖</span> Niat Sholat Qadha Dzuhur (4 rakaat)</h3>
+                        <div class="arabic-text">نَوَيْتُ قَضَاءَ صَلَاةِ الظُّهْرِ أَرْبَعَ رَكَعَاتٍ لِلّٰهِ تَعَالٰى</div>
+                        <div class="latin-text">Nawaitu qadha shalata zhuhri arba'a raka'aatin lillaahi ta'aalaa</div>
+                        <div class="translation-text">Saya niat mengqadha sholat Dzuhur empat rakaat karena Allah Ta'ala</div>
+                    </div>
+                    <div class="intention-section">
+                        <h3><span class="intention-icon">🕌</span> Catatan</h3>
+                        <p>Sholat Dzuhur terdiri dari 4 rakaat. Dilakukan dengan tenang dan khusyuk seperti sholat pada waktunya.</p>
+                    </div>
+                </div>
+                
+                <div id="asharIntention" class="intention-content">
+                    <div class="intention-section">
+                        <h3><span class="intention-icon">📖</span> Niat Sholat Qadha Ashar (4 rakaat)</h3>
+                        <div class="arabic-text">نَوَيْتُ قَضَاءَ صَلَاةِ الْعَصْرِ أَرْبَعَ رَكَعَاتٍ لِلّٰهِ تَعَالٰى</div>
+                        <div class="latin-text">Nawaitu qadha shalata ashri arba'a raka'aatin lillaahi ta'aalaa</div>
+                        <div class="translation-text">Saya niat mengqadha sholat Ashar empat rakaat karena Allah Ta'ala</div>
+                    </div>
+                    <div class="intention-section">
+                        <h3><span class="intention-icon">🕌</span> Catatan</h3>
+                        <p>Sholat Ashar terdiri dari 4 rakaat. Dilakukan dengan tenang dan khusyuk seperti sholat pada waktunya.</p>
+                    </div>
+                </div>
+                
+                <div id="maghribIntention" class="intention-content">
+                    <div class="intention-section">
+                        <h3><span class="intention-icon">📖</span> Niat Sholat Qadha Maghrib (3 rakaat)</h3>
+                        <div class="arabic-text">نَوَيْتُ قَضَاءَ صَلَاةِ الْمَغْرِبِ ثَلَاثَ رَكَعَاتٍ لِلّٰهِ تَعَالٰى</div>
+                        <div class="latin-text">Nawaitu qadha shalata maghribi tsalaatsa raka'aatin lillaahi ta'aalaa</div>
+                        <div class="translation-text">Saya niat mengqadha sholat Maghrib tiga rakaat karena Allah Ta'ala</div>
+                    </div>
+                    <div class="intention-section">
+                        <h3><span class="intention-icon">🕌</span> Catatan</h3>
+                        <p>Sholat Maghrib terdiri dari 3 rakaat. Dilakukan dengan tenang dan khusyuk seperti sholat pada waktunya.</p>
+                    </div>
+                </div>
+                
+                <div id="isyaIntention" class="intention-content">
+                    <div class="intention-section">
+                        <h3><span class="intention-icon">📖</span> Niat Sholat Qadha Isya (4 rakaat)</h3>
+                        <div class="arabic-text">نَوَيْتُ قَضَاءَ صَلَاةِ الْعِشَاءِ أَرْبَعَ رَكَعَاتٍ لِلّٰهِ تَعَالٰى</div>
+                        <div class="latin-text">Nawaitu qadha shalata 'isyaa-i arba'a raka'aatin lillaahi ta'aalaa</div>
+                        <div class="translation-text">Saya niat mengqadha sholat Isya empat rakaat karena Allah Ta'ala</div>
+                    </div>
+                    <div class="intention-section">
+                        <h3><span class="intention-icon">🕌</span> Catatan</h3>
+                        <p>Sholat Isya terdiri dari 4 rakaat. Dilakukan dengan tenang dan khusyuk seperti sholat pada waktunya.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tab container untuk fitur tambahan -->
+        <div class="tab-container">
+            <div class="tabs">
+                <button class="tab-button active" data-tab="data-tab">Data Qadha</button>
+                <button class="tab-button" data-tab="stats-tab">Statistik Lanjutan</button>
+                <button class="tab-button" data-tab="log-tab">Riwayat Aktivitas</button>
+                <button class="tab-button" data-tab="export-tab">Ekspor & Impor</button>
+            </div>
+            
+            <!-- Tab Data Qadha (Tab Default) -->
+            <div id="data-tab" class="tab-content active">
+                <div class="filters">
+                    <div class="search-container">
+                        <input type="text" id="searchInput" placeholder="Cari tanggal (format: DD/MM/YYYY)...">
+                    </div>
+                    <select id="filterStatus">
+                        <option value="all">Semua Hari</option>
+                        <option value="incomplete">Hari Belum Lengkap</option>
+                        <option value="complete">Hari Sudah Lengkap</option>
+                    </select>
+                    <select id="filterPrayer">
+                        <option value="all">Semua Shalat</option>
+                        <option value="shubuh">Shubuh</option>
+                        <option value="dzuhur">Dzuhur</option>
+                        <option value="ashar">Ashar</option>
+                        <option value="maghrib">Maghrib</option>
+                        <option value="isya">Isya</option>
+                    </select>
+                    <button class="btn btn-primary" id="applyFilters">Terapkan Filter</button>
+                    <button class="btn btn-secondary" id="resetFilters">Reset</button>
+                </div>
+                
+                <h2>Statistik Qadha</h2>
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <div class="stat-title">Shubuh</div>
+                        <div>Selesai: <span id="shubuhCompleted">0</span>/<span id="shubuhTotal">0</span></div>
+                        <div class="progress-container">
+                            <div class="progress-bar" id="shubuhProgress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Dzuhur</div>
+                        <div>Selesai: <span id="dzuhurCompleted">0</span>/<span id="dzuhurTotal">0</span></div>
+                        <div class="progress-container">
+                            <div class="progress-bar" id="dzuhurProgress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Ashar</div>
+                        <div>Selesai: <span id="asharCompleted">0</span>/<span id="asharTotal">0</span></div>
+                        <div class="progress-container">
+                            <div class="progress-bar" id="asharProgress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Maghrib</div>
+                        <div>Selesai: <span id="maghribCompleted">0</span>/<span id="maghribTotal">0</span></div>
+                        <div class="progress-container">
+                            <div class="progress-bar" id="maghribProgress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Isya</div>
+                        <div>Selesai: <span id="isyaCompleted">0</span>/<span id="isyaTotal">0</span></div>
+                        <div class="progress-container">
+                            <div class="progress-bar" id="isyaProgress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">Total Progress</div>
+                        <div>Selesai: <span id="totalCompleted">0</span>/<span id="totalAll">0</span></div>
+                        <div class="progress-container">
+                            <div class="progress-bar" id="totalProgress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <h2>Daftar Qadha Shalat</h2>
+                <div class="table-container">
+                    <table class="prayer-table" id="prayerTable">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Shubuh</th>
+                                <th>Dzuhur</th>
+                                <th>Ashar</th>
+                                <th>Maghrib</th>
+                                <th>Isya</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="prayerTableBody">
+                            <!-- Tabel akan diisi oleh JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Tab Statistik Lanjutan -->
+            <div id="stats-tab" class="tab-content">
+                <div class="weekly-stats">
+                    <p>Minggu ini kamu menyelesaikan <span id="weeklyCompletedCount" class="count">0</span> shalat qadha</p>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="prayerPieChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="weeklyBarChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Tab Log Aktivitas -->
+            <div id="log-tab" class="tab-content">
+                <h2>Riwayat Aktivitas Qadha</h2>
+                <div class="activity-log" id="activityLogContainer">
+                    <!-- Log akan diisi oleh JavaScript -->
+                    <p>Belum ada aktivitas yang tercatat.</p>
+                </div>
+            </div>
+            
+            <!-- Tab Ekspor & Impor -->
+            <div id="export-tab" class="tab-content">
+                <h2>Ekspor & Impor Data</h2>
+                <p>Gunakan fitur ini untuk mencadangkan atau memindahkan data qadha shalat Anda.</p>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-export" id="exportPDF">Ekspor ke PDF</button>
+                    <button class="btn btn-export" id="exportJSON">Ekspor Data (JSON)</button>
+                    <button class="btn btn-import" id="showImportForm">Impor Data (JSON)</button>
+                    <button class="btn btn-secondary" id="showDataInfo">Info Penyimpanan Data</button>
+                </div>
+                
+                <div class="upload-container" id="importContainer">
+                    <p>Pilih file JSON untuk diimpor:</p>
+                    <input type="file" id="importFile" accept=".json">
+                    <button class="btn btn-primary" id="processImport">Proses Impor</button>
+                </div>
+                
+                <div class="data-info-container" id="dataInfoContainer" style="display:none; margin-top: 20px; padding: 15px; background-color: var(--light); border-radius: 8px;">
+                    <h3>Informasi Penyimpanan Data</h3>
+                    <p>Aplikasi ini menggunakan teknologi penyimpanan berikut untuk menjaga data Anda tetap aman:</p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>IndexedDB</strong>: Penyimpanan database lokal di browser yang lebih tahan lama dibandingkan localStorage. Data akan tetap tersimpan meskipun Anda menghapus cookie dan cache browser.</li>
+                        <li><strong>Backup Otomatis</strong>: Sistem melakukan backup otomatis mingguan ke file JSON yang disimpan di komputer Anda.</li>
+                        <li><strong>Backup Manual</strong>: Anda dapat melakukan backup manual kapan saja dengan menekan tombol "Ekspor Data (JSON)".</li>
+                    </ul>
+                    <p style="margin-top: 10px;">Status database: <span id="dbStatus">Memeriksa...</span></p>
+                    <p>Backup terakhir: <span id="lastBackupDate">-</span></p>
+                    <div class="action-buttons" style="margin-top: 15px;">
+                        <button class="btn btn-primary" id="createManualBackup">Buat Backup Sekarang</button>
+                        <button class="btn btn-secondary" id="restoreFromBackup">Lihat Backup Tersimpan</button>
+                    </div>
+                </div>
+                
+                <div class="backup-list-container" id="backupListContainer" style="display:none; margin-top: 20px; padding: 15px; background-color: var(--light); border-radius: 8px;">
+                    <h3>Backup Tersimpan</h3>
+                    <p>Berikut adalah daftar backup yang tersimpan di perangkat Anda:</p>
+                    <div id="backupList" style="margin-top: 10px; max-height: 300px; overflow-y: auto;">
+                        <p>Memuat daftar backup...</p>
+                    </div>
+                </div>
+                
+                <div class="alert alert-success" id="successAlert">
+                    Data berhasil diimpor!
+                </div>
+                
+                <div class="alert alert-error" id="errorAlert">
+                    Terjadi kesalahan saat mengimpor data.
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Aplikasi Pelacak Qadha Shalat &copy; 2025</p>
+        </footer>
+    </div>
+
+    <script>
+        // Konstanta dan variabel global
+        const START_DATE = new Date(1999, 11, 15); // 15 Desember 1999
+        const END_DATE = new Date(2025, 11, 15);   // 15 Desember 2025
+        const PRAYER_TYPES = ['shubuh', 'dzuhur', 'ashar', 'maghrib', 'isya'];
+        let prayerData = {};
+        let activityLog = [];
+        let pieChart = null;
+        let barChart = null;
+        let db; // Database IndexedDB
+        
+        // Variabel untuk waktu shalat
+        let userCoordinates = null;
+        let prayerTimes = null;
+        let validQadhaTimes = [];
+        let currentTimeInterval = null;
+        
+        // Default lokasi (Jakarta)
+        const DEFAULT_COORDINATES = {
+            latitude: -6.2088,
+            longitude: 106.8456
+        };
+        
+        // Inisialisasi database IndexedDB
+        function initializeIndexedDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open("QadhaShalatDB", 1);
+                
+                request.onerror = function(event) {
+                    console.error("Error opening IndexedDB:", event.target.error);
+                    // Fallback ke localStorage jika IndexedDB gagal
+                    resolve(false);
+                };
+                
+                request.onupgradeneeded = function(event) {
+                    db = event.target.result;
+                    
+                    // Buat object store untuk data shalat
+                    if (!db.objectStoreNames.contains("prayerData")) {
+                        db.createObjectStore("prayerData", { keyPath: "id" });
+                    }
+                    
+                    // Buat object store untuk log aktivitas
+                    if (!db.objectStoreNames.contains("activityLog")) {
+                        const logStore = db.createObjectStore("activityLog", { keyPath: "timestamp" });
+                        logStore.createIndex("dateIndex", "timestamp");
+                    }
+                    
+                    // Buat object store untuk backup otomatis
+                    if (!db.objectStoreNames.contains("backup")) {
+                        db.createObjectStore("backup", { keyPath: "id" });
+                    }
+                };
+                
+                request.onsuccess = function(event) {
+                    db = event.target.result;
+                    console.log("IndexedDB initialized successfully");
+                    resolve(true);
+                };
+            });
+        }
+        
+        // Modifikasi fungsi untuk mendapatkan jumlah hari antara dua tanggal
+        function getDaysBetweenDates(startDate, endDate) {
+            const oneDay = 24 * 60 * 60 * 1000; // milliseconds dalam sehari
+            return Math.round(Math.abs((endDate - startDate) / oneDay)) + 1;
+        }
+        
+        // Format tanggal menjadi string DD/MM/YYYY
+        function formatDate(date) {
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+        
+        // Fungsi untuk mengurai tanggal dari format DD/MM/YYYY
+        function parseDate(dateString) {
+            const [day, month, year] = dateString.split('/').map(Number);
+            return new Date(year, month - 1, day);
+        }
+        
+        // Fungsi untuk mendapatkan daftar semua tanggal dalam rentang
+        function getAllDatesInRange(startDate, endDate) {
+            const dates = [];
+            let currentDate = new Date(startDate);
+            
+            while (currentDate <= endDate) {
+                dates.push(new Date(currentDate));
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            
+            return dates;
+        }
+        
+        // Inisialisasi data shalat
+        async function initializePrayerData() {
+            try {
+                // Coba ambil data dari IndexedDB
+                const dbData = await loadFromIndexedDB("prayerData", "all");
+                
+                if (dbData && dbData.length > 0) {
+                    // Jika data tersedia di IndexedDB, gunakan data tersebut
+                    prayerData = dbData[0].data;
+                    console.log("Data loaded from IndexedDB");
+                    
+                    // Pastikan semua hari dari rentang waktu sudah ada dalam data
+                    const allDates = getAllDatesInRange(START_DATE, END_DATE);
+                    let dataUpdated = false;
+                    
+                    allDates.forEach(date => {
+                        const dateString = formatDate(date);
+                        if (!prayerData[dateString]) {
+                            prayerData[dateString] = {
+                                shubuh: false,
+                                dzuhur: false,
+                                ashar: false,
+                                maghrib: false,
+                                isya: false
+                            };
+                            dataUpdated = true;
+                        }
+                    });
+                    
+                    if (dataUpdated) {
+                        // Simpan data yang diperbarui ke IndexedDB
+                        await saveData();
+                    }
+                } else {
+                    // Jika tidak ada data di IndexedDB, coba ambil dari localStorage
+                    const savedData = localStorage.getItem('qadhaData');
+                    
+                    if (savedData) {
+                        // Jika ada data di localStorage, migrasi ke IndexedDB
+                        prayerData = JSON.parse(savedData);
+                        console.log("Data migrated from localStorage to IndexedDB");
+                        await saveData();
+                    } else {
+                        // Jika tidak ada data di mana pun, buat data baru
+                        const allDates = getAllDatesInRange(START_DATE, END_DATE);
+                        
+                        allDates.forEach(date => {
+                            const dateString = formatDate(date);
+                            prayerData[dateString] = {
+                                shubuh: false,
+                                dzuhur: false,
+                                ashar: false,
+                                maghrib: false,
+                                isya: false
+                            };
+                        });
+                        
+                        // Simpan data ke IndexedDB
+                        await saveData();
+                    }
+                }
+            } catch (error) {
+                console.error("Error initializing prayer data:", error);
+                
+                // Fallback ke localStorage
+                const savedData = localStorage.getItem('qadhaData');
+                
+                if (savedData) {
+                    prayerData = JSON.parse(savedData);
+                } else {
+                    const allDates = getAllDatesInRange(START_DATE, END_DATE);
+                    
+                    allDates.forEach(date => {
+                        const dateString = formatDate(date);
+                        prayerData[dateString] = {
+                            shubuh: false,
+                            dzuhur: false,
+                            ashar: false,
+                            maghrib: false,
+                            isya: false
+                        };
+                    });
+                    
+                    // Simpan ke localStorage sebagai fallback
+                    localStorage.setItem('qadhaData', JSON.stringify(prayerData));
+                }
+            }
+        }
+        
+        // Simpan data ke IndexedDB dan localStorage (sebagai backup)
+        async function saveData() {
+            try {
+                // Simpan ke IndexedDB
+                await saveToIndexedDB("prayerData", { id: "qadhaPrayerData", data: prayerData });
+                await saveToIndexedDB("activityLog", { id: "qadhaActivityLog", data: activityLog });
+                
+                // Simpan juga ke localStorage sebagai cadangan
+                localStorage.setItem('qadhaData', JSON.stringify(prayerData));
+                localStorage.setItem('activityLog', JSON.stringify(activityLog));
+                
+                // Buat backup otomatis
+                createAutomaticBackup();
+                
+                return true;
+            } catch (error) {
+                console.error("Error saving data:", error);
+                
+                // Fallback ke localStorage
+                localStorage.setItem('qadhaData', JSON.stringify(prayerData));
+                localStorage.setItem('activityLog', JSON.stringify(activityLog));
+                
+                return false;
+            }
+        }
+        
+        // Simpan data ke IndexedDB
+        function saveToIndexedDB(storeName, data) {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error("Database not initialized"));
+                    return;
+                }
+                
+                try {
+                    const transaction = db.transaction(storeName, "readwrite");
+                    const store = transaction.objectStore(storeName);
+                    
+                    // Jika data adalah array, simpan semua entri
+                    if (Array.isArray(data)) {
+                        data.forEach(item => {
+                            store.put(item);
+                        });
+                    } else {
+                        // Jika data adalah objek tunggal, simpan objek tersebut
+                        const request = store.put(data);
+                        
+                        request.onerror = function(event) {
+                            reject(event.target.error);
+                        };
+                        
+                        request.onsuccess = function(event) {
+                            resolve(event.target.result);
+                        };
+                    }
+                    
+                    transaction.oncomplete = function() {
+                        resolve(true);
+                    };
+                    
+                    transaction.onerror = function(event) {
+                        reject(event.target.error);
+                    };
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+        
+        // Ambil data dari IndexedDB
+        function loadFromIndexedDB(storeName, key) {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject(new Error("Database not initialized"));
+                    return;
+                }
+                
+                try {
+                    const transaction = db.transaction(storeName, "readonly");
+                    const store = transaction.objectStore(storeName);
+                    
+                    if (key === "all") {
+                        // Ambil semua data dari object store
+                        const request = store.getAll();
+                        
+                        request.onerror = function(event) {
+                            reject(event.target.error);
+                        };
+                        
+                        request.onsuccess = function(event) {
+                            resolve(event.target.result);
+                        };
+                    } else {
+                        // Ambil data spesifik berdasarkan key
+                        const request = store.get(key);
+                        
+                        request.onerror = function(event) {
+                            reject(event.target.error);
+                        };
+                        
+                        request.onsuccess = function(event) {
+                            resolve(event.target.result);
+                        };
+                    }
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+        
+        // Fungsi untuk membuat backup otomatis
+        async function createAutomaticBackup() {
+            try {
+                const now = new Date();
+                const backupId = `auto_backup_${now.toISOString().split('T')[0]}`;
+                
+                // Buat objek backup
+                const backupData = {
+                    id: backupId,
+                    timestamp: now.getTime(),
+                    prayerData: prayerData,
+                    activityLog: activityLog
+                };
+                
+                // Simpan backup ke IndexedDB
+                await saveToIndexedDB("backup", backupData);
+                
+                // Simpan backup ke file lokal sekali seminggu
+                const lastBackupStr = localStorage.getItem('lastFileBackup');
+                if (lastBackupStr) {
+                    const lastBackup = new Date(parseInt(lastBackupStr));
+                    const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+                    
+                    if (now - lastBackup > sevenDaysInMs) {
+                        // Lebih dari seminggu sejak backup terakhir
+                        await createFileBackup(backupData, true);
+                        localStorage.setItem('lastFileBackup', now.getTime().toString());
+                    }
+                } else {
+                    // Belum pernah ada backup
+                    await createFileBackup(backupData, true);
+                    localStorage.setItem('lastFileBackup', now.getTime().toString());
+                }
+                
+                // Hapus backup lama (simpan maksimum 10 backup terakhir)
+                cleanupOldBackups();
+                
+                return true;
+            } catch (error) {
+                console.error("Error creating automatic backup:", error);
+                return false;
+            }
+        }
+        
+        // Fungsi untuk membersihkan backup lama
+        async function cleanupOldBackups() {
+            try {
+                // Ambil semua backup
+                const backups = await loadFromIndexedDB("backup", "all");
+                
+                // Urutkan berdasarkan timestamp (terbaru dulu)
+                backups.sort((a, b) => b.timestamp - a.timestamp);
+                
+                // Jika ada lebih dari 10 backup, hapus yang lama
+                if (backups.length > 10) {
+                    const transaction = db.transaction("backup", "readwrite");
+                    const store = transaction.objectStore("backup");
+                    
+                    // Hapus backup lama (mulai dari indeks ke-10)
+                    for (let i = 10; i < backups.length; i++) {
+                        store.delete(backups[i].id);
+                    }
+                }
+            } catch (error) {
+                console.error("Error cleaning up old backups:", error);
+            }
+        }
+        
+        // Fungsi untuk membuat file backup
+        async function createFileBackup(data, isAutomatic = false) {
+            try {
+                const jsonString = JSON.stringify(data, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                
+                if (isAutomatic) {
+                    // Untuk backup otomatis, simpan ke penyimpanan download browser
+                    const date = new Date().toISOString().split('T')[0];
+                    const filename = `qadha-shalat-auto-backup-${date}.json`;
+                    
+                    if ('showSaveFilePicker' in window) {
+                        try {
+                            const handle = await window.showSaveFilePicker({
+                                suggestedName: filename,
+                                types: [{
+                                    description: 'JSON Files',
+                                    accept: { 'application/json': ['.json'] }
+                                }]
+                            });
+                            
+                            const writable = await handle.createWritable();
+                            await writable.write(blob);
+                            await writable.close();
+                            
+                            showAlert('success', 'Backup otomatis berhasil disimpan!');
+                        } catch (err) {
+                            // Pengguna mungkin membatalkan dialog
+                            console.log("User may have cancelled automatic backup");
+                            
+                            // Fallback ke metode lama
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = filename;
+                            a.style.display = 'none';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                        }
+                    } else {
+                        // Browser tidak mendukung File System Access API
+                        // Gunakan metode download tradisional
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        a.style.display = 'none';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }
+                } else {
+                    // Untuk backup manual, tampilkan dialog save
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `qadha-shalat-data-${new Date().toISOString().split('T')[0]}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }
+                
+                return true;
+            } catch (error) {
+                console.error("Error creating file backup:", error);
+                return false;
+            }
+        }
+        
+        // Modifikasi fungsi untuk menambahkan log aktivitas
+        async function addActivityLog(date, prayer, isCompleted) {
+            const now = new Date();
+            const logEntry = {
+                timestamp: now.getTime(),
+                date: date,
+                prayer: prayer,
+                action: isCompleted ? 'completed' : 'uncompleted'
+            };
+            
+            activityLog.push(logEntry);
+            
+            // Simpan perubahan ke IndexedDB
+            await saveData();
+            
+            // Perbarui tampilan log
+            updateActivityLog();
+        }
+        
+        // Modifikasi fungsi untuk memuat log aktivitas dari IndexedDB
+        async function loadActivityLog() {
+            try {
+                // Coba ambil data dari IndexedDB
+                const dbData = await loadFromIndexedDB("activityLog", "all");
+                
+                if (dbData && dbData.length > 0) {
+                    // Jika data tersedia di IndexedDB, gunakan data tersebut
+                    activityLog = dbData;
+                    console.log("Activity log loaded from IndexedDB");
+                } else {
+                    // Jika tidak ada data di IndexedDB, coba ambil dari localStorage
+                    const savedLog = localStorage.getItem('activityLog');
+                    
+                    if (savedLog) {
+                        // Jika ada data di localStorage, migrasi ke IndexedDB
+                        activityLog = JSON.parse(savedLog);
+                        console.log("Activity log migrated from localStorage to IndexedDB");
+                        
+                        // Simpan ke IndexedDB
+                        activityLog.forEach(async (entry) => {
+                            await saveToIndexedDB("activityLog", entry);
+                        });
+                    } else {
+                        activityLog = [];
+                    }
+                }
+                
+                // Perbarui tampilan log
+                updateActivityLog();
+            } catch (error) {
+                console.error("Error loading activity log:", error);
+                
+                // Fallback ke localStorage
+                const savedLog = localStorage.getItem('activityLog');
+                
+                if (savedLog) {
+                    activityLog = JSON.parse(savedLog);
+                } else {
+                    activityLog = [];
+                }
+                
+                // Perbarui tampilan log
+                updateActivityLog();
+            }
+        }
+        
+        // Fungsi untuk memperbarui tampilan log aktivitas
+        function updateActivityLog() {
+            const container = document.getElementById('activityLogContainer');
+            
+            if (!activityLog.length) {
+                container.innerHTML = '<p>Belum ada aktivitas yang tercatat.</p>';
+                return;
+            }
+            
+            // Urutkan log berdasarkan timestamp (terbaru dulu)
+            const sortedLog = [...activityLog].sort((a, b) => b.timestamp - a.timestamp);
+            
+            // Kelompokkan log berdasarkan tanggal
+            const groupedLog = {};
+            sortedLog.forEach(entry => {
+                const date = new Date(entry.timestamp);
+                const dateString = date.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                
+                if (!groupedLog[dateString]) {
+                    groupedLog[dateString] = [];
+                }
+                
+                groupedLog[dateString].push(entry);
+            });
+            
+            // Render log
+            container.innerHTML = '';
+            
+            Object.keys(groupedLog).forEach(dateString => {
+                const entries = groupedLog[dateString];
+                const logGroup = document.createElement('div');
+                logGroup.className = 'log-entry';
+                
+                const dateHeader = document.createElement('div');
+                dateHeader.className = 'log-date';
+                dateHeader.textContent = dateString;
+                logGroup.appendChild(dateHeader);
+                
+                entries.forEach(entry => {
+                    const logDetails = document.createElement('div');
+                    logDetails.className = 'log-details';
+                    
+                    const time = new Date(entry.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                    const prayerName = entry.prayer.charAt(0).toUpperCase() + entry.prayer.slice(1);
+                    const actionText = entry.action === 'completed' ? 'ditandai selesai' : 'ditandai belum selesai';
+                    
+                    logDetails.textContent = `${time} - Shalat ${prayerName} (${entry.date}) ${actionText}`;
+                    logGroup.appendChild(logDetails);
+                });
+                
+                container.appendChild(logGroup);
+            });
+        }
+        
+        // Fungsi untuk membuat tabel shalat
+        function renderPrayerTable(filteredDates = null) {
+            const tableBody = document.getElementById('prayerTableBody');
+            tableBody.innerHTML = '';
+            
+            // Gunakan semua tanggal jika tidak ada filter
+            const dates = filteredDates || Object.keys(prayerData).sort((a, b) => {
+                return parseDate(a) - parseDate(b);
+            });
+            
+            dates.forEach(dateString => {
+                const prayers = prayerData[dateString];
+                const row = document.createElement('tr');
+                
+                // Tambahkan kolom tanggal
+                const dateCell = document.createElement('td');
+                dateCell.className = 'date-column';
+                dateCell.textContent = dateString;
+                row.appendChild(dateCell);
+                
+                // Tambahkan kolom untuk setiap shalat
+                PRAYER_TYPES.forEach(prayer => {
+                    const cell = document.createElement('td');
+                    cell.className = 'prayer-column';
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = prayers[prayer];
+                    checkbox.dataset.date = dateString;
+                    checkbox.dataset.prayer = prayer;
+                    checkbox.addEventListener('change', handleCheckboxChange);
+                    cell.appendChild(checkbox);
+                    row.appendChild(cell);
+                });
+                
+                // Tambahkan kolom status
+                const statusCell = document.createElement('td');
+                const isComplete = PRAYER_TYPES.every(prayer => prayers[prayer]);
+                statusCell.textContent = isComplete ? 'Lengkap' : 'Belum Lengkap';
+                statusCell.style.color = isComplete ? 'var(--success)' : 'var(--warning)';
+                row.appendChild(statusCell);
+                
+                // Tambahkan kelas untuk baris yang lengkap
+                if (isComplete) {
+                    row.classList.add('completed-row');
+                }
+                
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Fungsi untuk menangani perubahan checkbox
+        function handleCheckboxChange(event) {
+            const { date, prayer } = event.target.dataset;
+            
+            // Periksa apakah waktu saat ini sah untuk qadha
+            const now = new Date();
+            const currentTimeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false });
+            let isValidTime = false;
+            let reasonText = "";
+            
+            // Hanya periksa jika pengguna mencoba menandai checkbox (bukan menghapus tanda)
+            if (event.target.checked && validQadhaTimes.length > 0) {
+                for (const time of validQadhaTimes) {
+                    // Handle kasus khusus untuk periode yang melewati tengah malam
+                    if (time.start > time.end && time.valid) {
+                        // Periode dari malam ke pagi (misalnya 22:00 - 04:00)
+                        if ((currentTimeStr >= time.start || currentTimeStr <= time.end) && time.valid) {
+                            isValidTime = true;
+                            break;
+                        }
+                    } else {
+                        // Periode normal dalam satu hari
+                        if (currentTimeStr >= time.start && currentTimeStr <= time.end) {
+                            if (time.valid) {
+                                isValidTime = true;
+                            } else {
+                                reasonText = time.reason;
+                            }
+                            break;
+                        }
+                    }
+                }
+                
+                // Jika waktu tidak sah, tampilkan peringatan
+                if (!isValidTime && validQadhaTimes.length > 0) {
+                    const confirmQadha = confirm(`Peringatan: Saat ini adalah ${reasonText || "waktu yang tidak sah untuk qadha shalat"}. Apakah Anda yakin ingin menandai qadha shalat ini?`);
+                    
+                    if (!confirmQadha) {
+                        event.target.checked = false;
+                        return; // Keluar dari fungsi jika pengguna membatalkan
+                    }
+                }
+            }
+            
+            // Simpan status sebelumnya untuk menentukan perubahan
+            const previousStatus = prayerData[date][prayer];
+            
+            // Lanjutkan dengan logika yang sudah ada
+            prayerData[date][prayer] = event.target.checked;
+            
+            // Tambahkan log aktivitas jika status berubah
+            if (previousStatus !== event.target.checked) {
+                addActivityLog(date, prayer, event.target.checked);
+            }
+            
+            // Perbarui status pada baris
+            const row = event.target.closest('tr');
+            const isComplete = PRAYER_TYPES.every(prayer => prayerData[date][prayer]);
+            
+            const statusCell = row.querySelector('td:last-child');
+            statusCell.textContent = isComplete ? 'Lengkap' : 'Belum Lengkap';
+            statusCell.style.color = isComplete ? 'var(--success)' : 'var(--warning)';
+            
+            if (isComplete) {
+                row.classList.add('completed-row');
+            } else {
+                row.classList.remove('completed-row');
+            }
+            
+            // Simpan perubahan ke localStorage
+            saveData();
+            
+            // Perbarui statistik
+            updateStatistics();
+            
+            // Perbarui chart jika tab statistik lanjutan aktif
+            if (document.getElementById('stats-tab').classList.contains('active')) {
+                initPieChart();
+                initBarChart();
+            }
+        }
+        
+        // Fungsi untuk memperbarui statistik
+        function updateStatistics() {
+            const totalDays = Object.keys(prayerData).length;
+            document.getElementById('totalDays').textContent = totalDays;
+            document.getElementById('totalPrayers').textContent = totalDays * 5;
+            
+            // Hitung untuk setiap jenis shalat
+            const stats = {
+                shubuh: { completed: 0, total: totalDays },
+                dzuhur: { completed: 0, total: totalDays },
+                ashar: { completed: 0, total: totalDays },
+                maghrib: { completed: 0, total: totalDays },
+                isya: { completed: 0, total: totalDays }
+            };
+            
+            // Hitung jumlah yang sudah selesai
+            Object.values(prayerData).forEach(prayers => {
+                PRAYER_TYPES.forEach(prayer => {
+                    if (prayers[prayer]) {
+                        stats[prayer].completed++;
+                    }
+                });
+            });
+            
+            // Perbarui tampilan statistik
+            let totalCompleted = 0;
+            const totalAll = totalDays * 5;
+            
+            PRAYER_TYPES.forEach(prayer => {
+                const { completed, total } = stats[prayer];
+                const percent = (completed / total) * 100;
+                
+                document.getElementById(`${prayer}Completed`).textContent = completed;
+                document.getElementById(`${prayer}Total`).textContent = total;
+                document.getElementById(`${prayer}Progress`).style.width = `${percent}%`;
+                
+                totalCompleted += completed;
+            });
+            
+            // Perbarui total progress
+            const totalPercent = (totalCompleted / totalAll) * 100;
+            document.getElementById('totalCompleted').textContent = totalCompleted;
+            document.getElementById('totalAll').textContent = totalAll;
+            document.getElementById('totalProgress').style.width = `${totalPercent}%`;
+        }
+        
+        // Fungsi untuk menerapkan filter
+        function applyFilters() {
+            const searchText = document.getElementById('searchInput').value.trim();
+            const statusFilter = document.getElementById('filterStatus').value;
+            const prayerFilter = document.getElementById('filterPrayer').value;
+            
+            let filteredDates = Object.keys(prayerData);
+            
+            // Filter berdasarkan pencarian tanggal
+            if (searchText) {
+                filteredDates = filteredDates.filter(date => date.includes(searchText));
+            }
+            
+            // Filter berdasarkan status kelengkapan
+            if (statusFilter !== 'all') {
+                filteredDates = filteredDates.filter(date => {
+                    const prayers = prayerData[date];
+                    const isComplete = PRAYER_TYPES.every(prayer => prayers[prayer]);
+                    return statusFilter === 'complete' ? isComplete : !isComplete;
+                });
+            }
+            
+            // Filter berdasarkan jenis shalat
+            if (prayerFilter !== 'all') {
+                filteredDates = filteredDates.filter(date => {
+                    return !prayerData[date][prayerFilter];
+                });
+            }
+            
+            // Tampilkan hasil filter
+            renderPrayerTable(filteredDates);
+        }
+        
+        // Fungsi untuk reset filter
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterStatus').value = 'all';
+            document.getElementById('filterPrayer').value = 'all';
+            renderPrayerTable();
+        }
+        
+        // Fungsi untuk mendapatkan lokasi pengguna
+        function getUserLocation() {
+            document.getElementById('userLocation').textContent = "Mendeteksi...";
+            
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    // Success callback
+                    position => {
+                        userCoordinates = {
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude
+                        };
+                        
+                        // Dapatkan nama lokasi dari koordinat
+                        getLocationName(userCoordinates);
+                        
+                        // Dapatkan waktu shalat untuk lokasi ini
+                        getPrayerTimes(userCoordinates);
+                    },
+                    // Error callback
+                    error => {
+                        console.error("Error getting location:", error);
+                        document.getElementById('userLocation').textContent = "Tidak dapat mendeteksi lokasi";
+                        
+                        // Gunakan lokasi default
+                        userCoordinates = DEFAULT_COORDINATES;
+                        document.getElementById('userLocation').textContent = "Jakarta (default)";
+                        
+                        // Dapatkan waktu shalat untuk lokasi default
+                        getPrayerTimes(userCoordinates);
+                    },
+                    // Options
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 5000,
+                        maximumAge: 0
+                    }
+                );
+            } else {
+                // Geolocation tidak didukung
+                document.getElementById('userLocation').textContent = "Geolocation tidak didukung di browser ini";
+                
+                // Gunakan lokasi default
+                userCoordinates = DEFAULT_COORDINATES;
+                document.getElementById('userLocation').textContent = "Jakarta (default)";
+                
+                // Dapatkan waktu shalat untuk lokasi default
+                getPrayerTimes(userCoordinates);
+            }
+        }
+        
+        // Fungsi untuk mendapatkan nama lokasi dari koordinat menggunakan API Nominatim
+        function getLocationName(coordinates) {
+            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coordinates.latitude}&lon=${coordinates.longitude}&zoom=10`;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    let locationName = "Lokasi tidak diketahui";
+                    
+                    if (data && data.address) {
+                        const address = data.address;
+                        // Coba dapatkan kota/kabupaten dan provinsi
+                        const city = address.city || address.town || address.village || address.county || "";
+                        const state = address.state || "";
+                        
+                        if (city && state) {
+                            locationName = `${city}, ${state}`;
+                        } else if (city) {
+                            locationName = city;
+                        } else if (state) {
+                            locationName = state;
+                        }
+                    }
+                    
+                    document.getElementById('userLocation').textContent = locationName;
+                })
+                .catch(error => {
+                    console.error("Error getting location name:", error);
+                    document.getElementById('userLocation').textContent = `${coordinates.latitude.toFixed(4)}, ${coordinates.longitude.toFixed(4)}`;
+                });
+        }
+        
+        // Fungsi untuk mendapatkan waktu shalat dari API Aladhan
+        function getPrayerTimes(coordinates) {
+            const date = new Date();
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            
+            // Cek apakah data cache tersedia dan masih untuk hari ini
+            const cacheKey = `prayerTimes_${year}_${month}_${day}_${coordinates.latitude.toFixed(4)}_${coordinates.longitude.toFixed(4)}`;
+            const cachedData = localStorage.getItem(cacheKey);
+            
+            if (cachedData) {
+                prayerTimes = JSON.parse(cachedData);
+                calculateValidQadhaTimes();
+                updateValidTimesDisplay();
+                return;
+            }
+            
+            const url = `https://api.aladhan.com/v1/timings/${day}-${month}-${year}?latitude=${coordinates.latitude}&longitude=${coordinates.longitude}&method=2`;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.data && data.data.timings) {
+                        prayerTimes = data.data.timings;
+                        
+                        // Simpan ke cache untuk penggunaan offline
+                        localStorage.setItem(cacheKey, JSON.stringify(prayerTimes));
+                        
+                        // Hitung waktu sah untuk qadha
+                        calculateValidQadhaTimes();
+                        
+                        // Perbarui tampilan
+                        updateValidTimesDisplay();
+                    } else {
+                        document.getElementById('validTimesContainer').innerHTML = 
+                            `<p class="time-slot invalid-time">Tidak dapat memuat waktu shalat. Silakan coba lagi nanti.</p>`;
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching prayer times:", error);
+                    document.getElementById('validTimesContainer').innerHTML = 
+                        `<p class="time-slot invalid-time">Tidak dapat memuat waktu shalat. Silakan coba lagi nanti.</p>`;
+                });
+        }
+        
+        // Fungsi untuk mengonversi format waktu dari "HH:MM" ke menit sejak tengah malam
+        function timeToMinutes(timeString) {
+            const [hours, minutes] = timeString.split(':').map(Number);
+            return hours * 60 + minutes;
+        }
+        
+        // Fungsi untuk mengonversi menit sejak tengah malam ke format "HH:MM"
+        function minutesToTime(minutes) {
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+        }
+        
+        // Fungsi untuk menghitung waktu-waktu yang sah untuk qadha
+        function calculateValidQadhaTimes() {
+            validQadhaTimes = [];
+            
+            if (!prayerTimes) return;
+            
+            // Waktu shalat dalam format "HH:MM"
+            const fajr = prayerTimes.Fajr;
+            const sunrise = prayerTimes.Sunrise;
+            const dhuhr = prayerTimes.Dhuhr;
+            const asr = prayerTimes.Asr;
+            const maghrib = prayerTimes.Maghrib;
+            const isha = prayerTimes.Isha;
+            
+            // Konversi waktu ke menit untuk perhitungan yang lebih mudah
+            const fajrMinutes = timeToMinutes(fajr);
+            const sunriseMinutes = timeToMinutes(sunrise);
+            const dhuhrMinutes = timeToMinutes(dhuhr);
+            const asrMinutes = timeToMinutes(asr);
+            const maghribMinutes = timeToMinutes(maghrib);
+            const ishaMinutes = timeToMinutes(isha);
+            
+            // Waktu terlarang:
+            // 1. Saat matahari terbit (sekitar 15 menit setelah fajar sampai matahari terbit penuh)
+            // 2. Saat matahari tepat di atas kepala (sekitar 5 menit sebelum Dzuhur)
+            // 3. Saat matahari mulai terbenam (sekitar 15 menit sebelum Maghrib)
+            
+            // Periode waktu yang sah untuk qadha:
+            // 1. Dari setelah fajar sampai waktu terlarang matahari terbit
+            validQadhaTimes.push({
+                start: fajr,
+                end: minutesToTime(sunriseMinutes - 15),
+                valid: true
+            });
+            
+            // 2. Dari setelah matahari terbit sampai waktu terlarang sebelum dzuhur
+            validQadhaTimes.push({
+                start: sunrise,
+                end: minutesToTime(dhuhrMinutes - 5),
+                valid: true
+            });
+            
+            // 3. Dari setelah dzuhur sampai waktu terlarang sebelum maghrib
+            validQadhaTimes.push({
+                start: dhuhr,
+                end: minutesToTime(maghribMinutes - 15),
+                valid: true
+            });
+            
+            // 4. Dari setelah maghrib sampai fajar berikutnya
+            validQadhaTimes.push({
+                start: maghrib,
+                end: "23:59",
+                valid: true
+            });
+            
+            // 5. Dari tengah malam sampai fajar
+            validQadhaTimes.push({
+                start: "00:00",
+                end: fajr,
+                valid: true
+            });
+            
+            // Waktu-waktu yang tidak sah untuk qadha
+            // 1. Waktu terlarang saat matahari terbit
+            validQadhaTimes.push({
+                start: minutesToTime(sunriseMinutes - 15),
+                end: sunrise,
+                valid: false,
+                reason: "Waktu terlarang: saat matahari terbit"
+            });
+            
+            // 2. Waktu terlarang saat matahari tepat di atas kepala
+            validQadhaTimes.push({
+                start: minutesToTime(dhuhrMinutes - 5),
+                end: dhuhr,
+                valid: false,
+                reason: "Waktu terlarang: saat matahari tepat di atas kepala"
+            });
+            
+            // 3. Waktu terlarang saat matahari mulai terbenam
+            validQadhaTimes.push({
+                start: minutesToTime(maghribMinutes - 15),
+                end: maghrib,
+                valid: false,
+                reason: "Waktu terlarang: saat matahari mulai terbenam"
+            });
+        }
+        
+        // Fungsi untuk memperbarui tampilan waktu-waktu yang sah untuk qadha
+        function updateValidTimesDisplay() {
+            const container = document.getElementById('validTimesContainer');
+            container.innerHTML = '';
+            
+            if (!validQadhaTimes.length) {
+                container.innerHTML = '<p>Memuat waktu shalat...</p>';
+                return;
+            }
+            
+            // Tampilkan waktu-waktu yang sah
+            validQadhaTimes.filter(time => time.valid).forEach(time => {
+                const timeSlot = document.createElement('div');
+                timeSlot.className = 'time-slot valid-time';
+                timeSlot.textContent = `${time.start} - ${time.end}`;
+                container.appendChild(timeSlot);
+            });
+            
+            // Tampilkan waktu-waktu yang tidak sah
+            validQadhaTimes.filter(time => !time.valid).forEach(time => {
+                const timeSlot = document.createElement('div');
+                timeSlot.className = 'time-slot invalid-time tooltip';
+                timeSlot.textContent = `${time.start} - ${time.end} (Terlarang)`;
+                
+                const tooltip = document.createElement('span');
+                tooltip.className = 'tooltiptext';
+                tooltip.textContent = time.reason;
+                
+                timeSlot.appendChild(tooltip);
+                container.appendChild(timeSlot);
+            });
+            
+            // Perbarui tanggal dan waktu saat ini
+            updateCurrentDateTime();
+            
+            // Set interval untuk memperbarui waktu saat ini
+            if (currentTimeInterval) {
+                clearInterval(currentTimeInterval);
+            }
+            
+            currentTimeInterval = setInterval(updateCurrentDateTime, 1000);
+        }
+        
+        // Fungsi untuk memperbarui tampilan tanggal dan waktu saat ini
+        function updateCurrentDateTime() {
+            const now = new Date();
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('id-ID', dateOptions);
+            
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString('id-ID', timeOptions);
+            
+            // Periksa apakah waktu saat ini merupakan waktu yang sah untuk qadha
+            const currentTimeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false });
+            const currentMinutes = timeToMinutes(currentTimeStr);
+            
+            let isValidTime = false;
+            let statusText = "";
+            
+            for (const time of validQadhaTimes) {
+                // Handle kasus khusus untuk periode yang melewati tengah malam
+                if (time.start > time.end && time.valid) {
+                    // Periode dari malam ke pagi (misalnya 22:00 - 04:00)
+                    if ((currentTimeStr >= time.start || currentTimeStr <= time.end) && time.valid) {
+                        isValidTime = true;
+                        statusText = `<span style="color: var(--success)">✓ WAKTU SAH untuk qadha shalat</span>`;
+                        break;
+                    }
+                } else {
+                    // Periode normal dalam satu hari
+                    if (currentTimeStr >= time.start && currentTimeStr <= time.end) {
+                        if (time.valid) {
+                            isValidTime = true;
+                            statusText = `<span style="color: var(--success)">✓ WAKTU SAH untuk qadha shalat</span>`;
+                        } else {
+                            statusText = `<span style="color: var(--danger)">✗ WAKTU TERLARANG untuk qadha shalat: ${time.reason}</span>`;
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            document.getElementById('currentStatus').innerHTML = statusText;
+        }
+        
+        // Fungsi untuk menghitung statistik mingguan
+        function calculateWeeklyStats() {
+            const now = new Date();
+            const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            
+            // Filter log untuk aktivitas seminggu terakhir
+            const weeklyActivities = activityLog.filter(entry => {
+                const entryDate = new Date(entry.timestamp);
+                return entryDate >= oneWeekAgo && entry.action === 'completed';
+            });
+            
+            // Update tampilan
+            document.getElementById('weeklyCompletedCount').textContent = weeklyActivities.length;
+            
+            return weeklyActivities;
+        }
+        
+        // Fungsi untuk menginisialisasi pie chart
+        function initPieChart() {
+            const ctx = document.getElementById('prayerPieChart').getContext('2d');
+            
+            // Hitung total per jenis shalat
+            const stats = {
+                shubuh: { completed: 0, total: 0 },
+                dzuhur: { completed: 0, total: 0 },
+                ashar: { completed: 0, total: 0 },
+                maghrib: { completed: 0, total: 0 },
+                isya: { completed: 0, total: 0 }
+            };
+            
+            // Hitung jumlah total per jenis shalat
+            Object.keys(prayerData).forEach(date => {
+                PRAYER_TYPES.forEach(prayer => {
+                    stats[prayer].total++;
+                    if (prayerData[date][prayer]) {
+                        stats[prayer].completed++;
+                    }
+                });
+            });
+            
+            // Data untuk pie chart
+            const data = {
+                labels: ['Shubuh', 'Dzuhur', 'Ashar', 'Maghrib', 'Isya'],
+                datasets: [{
+                    data: PRAYER_TYPES.map(prayer => stats[prayer].completed),
+                    backgroundColor: [
+                        '#FF6384',
+                        '#36A2EB',
+                        '#FFCE56',
+                        '#4BC0C0',
+                        '#9966FF'
+                    ]
+                }]
+            };
+            
+            // Opsi untuk pie chart
+            const options = {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Persentase Qadha Shalat Selesai per Jenis'
+                    }
+                }
+            };
+            
+            // Buat pie chart
+            if (pieChart) {
+                pieChart.destroy();
+            }
+            
+            pieChart = new Chart(ctx, {
+                type: 'pie',
+                data: data,
+                options: options
+            });
+        }
+        
+        // Fungsi untuk menginisialisasi bar chart
+        function initBarChart() {
+            const ctx = document.getElementById('weeklyBarChart').getContext('2d');
+            
+            // Dapatkan data aktivitas mingguan
+            const weeklyActivities = calculateWeeklyStats();
+            
+            // Kelompokkan aktivitas per hari
+            const dayData = {
+                'Minggu': 0,
+                'Senin': 0,
+                'Selasa': 0,
+                'Rabu': 0,
+                'Kamis': 0,
+                'Jumat': 0,
+                'Sabtu': 0
+            };
+            
+            weeklyActivities.forEach(entry => {
+                const day = new Date(entry.timestamp).toLocaleDateString('id-ID', { weekday: 'long' });
+                dayData[day]++;
+            });
+            
+            // Data untuk bar chart
+            const data = {
+                labels: Object.keys(dayData),
+                datasets: [{
+                    label: 'Qadha Shalat Selesai',
+                    data: Object.values(dayData),
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            };
+            
+            // Opsi untuk bar chart
+            const options = {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Qadha Shalat Selesai per Hari (7 Hari Terakhir)'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            };
+            
+            // Buat bar chart
+            if (barChart) {
+                barChart.destroy();
+            }
+            
+            barChart = new Chart(ctx, {
+                type: 'bar',
+                data: data,
+                options: options
+            });
+        }
+        
+        // Fungsi untuk menangani klik tab
+        function handleTabClick(event) {
+            const tabId = event.target.dataset.tab;
+            
+            // Hapus kelas aktif dari semua tab dan konten
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Tambahkan kelas aktif ke tab dan konten yang dipilih
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+            
+            // Inisialisasi chart jika tab statistik lanjutan dipilih
+            if (tabId === 'stats-tab') {
+                initPieChart();
+                initBarChart();
+            }
+        }
+        
+        // Fungsi untuk mengatur event listener ekspor dan impor
+        function setupExportImportListeners() {
+            // Export PDF
+            document.getElementById('exportPDF').addEventListener('click', exportToPDF);
+            
+            // Export JSON
+            document.getElementById('exportJSON').addEventListener('click', exportToJSON);
+            
+            // Show import form
+            document.getElementById('showImportForm').addEventListener('click', function() {
+                const importContainer = document.getElementById('importContainer');
+                importContainer.style.display = importContainer.style.display === 'block' ? 'none' : 'block';
+                document.getElementById('dataInfoContainer').style.display = 'none';
+                document.getElementById('backupListContainer').style.display = 'none';
+            });
+            
+            // Process import
+            document.getElementById('processImport').addEventListener('click', importFromJSON);
+            
+            // Show data info
+            document.getElementById('showDataInfo').addEventListener('click', function() {
+                const dataInfoContainer = document.getElementById('dataInfoContainer');
+                dataInfoContainer.style.display = dataInfoContainer.style.display === 'block' ? 'none' : 'block';
+                document.getElementById('importContainer').style.display = 'none';
+                document.getElementById('backupListContainer').style.display = 'none';
+                
+                // Update status informasi
+                updateDataInfo();
+            });
+            
+            // Create manual backup
+            document.getElementById('createManualBackup').addEventListener('click', async function() {
+                const now = new Date();
+                const backupId = `manual_backup_${now.toISOString().split('T')[0]}_${now.getHours()}-${now.getMinutes()}`;
+                
+                // Buat objek backup
+                const backupData = {
+                    id: backupId,
+                    timestamp: now.getTime(),
+                    prayerData: prayerData,
+                    activityLog: activityLog
+                };
+                
+                try {
+                    // Simpan backup ke IndexedDB
+                    await saveToIndexedDB("backup", backupData);
+                    
+                    // Buat file backup
+                    await createFileBackup(backupData);
+                    
+                    // Update tampilan
+                    updateDataInfo();
+                    showAlert('success', 'Backup manual berhasil dibuat!');
+                } catch (error) {
+                    console.error("Error creating manual backup:", error);
+                    showAlert('error', 'Terjadi kesalahan saat membuat backup.');
+                }
+            });
+            
+            // Show backup list
+            document.getElementById('restoreFromBackup').addEventListener('click', async function() {
+                const backupListContainer = document.getElementById('backupListContainer');
+                backupListContainer.style.display = backupListContainer.style.display === 'block' ? 'none' : 'block';
+                
+                // Update daftar backup
+                await updateBackupList();
+            });
+        }
+        
+        // Fungsi untuk mengekspor data ke PDF
+        function exportToPDF() {
+            // Inisialisasi jsPDF
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Tambahkan judul
+            doc.setFontSize(20);
+            doc.text('Laporan Qadha Shalat', 105, 15, { align: 'center' });
+            
+            // Tambahkan informasi umum
+            doc.setFontSize(12);
+            doc.text(`Tanggal Laporan: ${new Date().toLocaleDateString('id-ID')}`, 14, 30);
+            
+            // Statistik total
+            doc.setFontSize(14);
+            doc.text('Statistik Total', 14, 40);
+            
+            // Hitung total per jenis shalat
+            const totalStats = {
+                shubuh: { completed: 0, total: 0 },
+                dzuhur: { completed: 0, total: 0 },
+                ashar: { completed: 0, total: 0 },
+                maghrib: { completed: 0, total: 0 },
+                isya: { completed: 0, total: 0 }
+            };
+            
+            Object.keys(prayerData).forEach(date => {
+                PRAYER_TYPES.forEach(prayer => {
+                    totalStats[prayer].total++;
+                    if (prayerData[date][prayer]) {
+                        totalStats[prayer].completed++;
+                    }
+                });
+            });
+            
+            // Tampilkan tabel statistik
+            const totalTable = [
+                ['Jenis Shalat', 'Selesai', 'Total', 'Persentase'],
+                ['Shubuh', totalStats.shubuh.completed, totalStats.shubuh.total, `${((totalStats.shubuh.completed / totalStats.shubuh.total) * 100 || 0).toFixed(1)}%`],
+                ['Dzuhur', totalStats.dzuhur.completed, totalStats.dzuhur.total, `${((totalStats.dzuhur.completed / totalStats.dzuhur.total) * 100 || 0).toFixed(1)}%`],
+                ['Ashar', totalStats.ashar.completed, totalStats.ashar.total, `${((totalStats.ashar.completed / totalStats.ashar.total) * 100 || 0).toFixed(1)}%`],
+                ['Maghrib', totalStats.maghrib.completed, totalStats.maghrib.total, `${((totalStats.maghrib.completed / totalStats.maghrib.total) * 100 || 0).toFixed(1)}%`],
+                ['Isya', totalStats.isya.completed, totalStats.isya.total, `${((totalStats.isya.completed / totalStats.isya.total) * 100 || 0).toFixed(1)}%`]
+            ];
+            
+            doc.autoTable({
+                head: [totalTable[0]],
+                body: totalTable.slice(1),
+                startY: 45,
+                theme: 'grid'
+            });
+            
+            // Statistik mingguan
+            const weeklyActivities = calculateWeeklyStats();
+            
+            doc.setFontSize(14);
+            doc.text('Statistik Mingguan', 14, doc.lastAutoTable.finalY + 15);
+            
+            doc.setFontSize(12);
+            doc.text(`Total qadha selesai 7 hari terakhir: ${weeklyActivities.length}`, 14, doc.lastAutoTable.finalY + 25);
+            
+            // Log aktivitas 7 hari terakhir
+            doc.setFontSize(14);
+            doc.text('Log Aktivitas 7 Hari Terakhir', 14, doc.lastAutoTable.finalY + 35);
+            
+            // Urutkan dan filter log 7 hari terakhir
+            const now = new Date();
+            const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            
+            const recentLog = activityLog
+                .filter(entry => new Date(entry.timestamp) >= oneWeekAgo)
+                .sort((a, b) => b.timestamp - a.timestamp);
+            
+            if (recentLog.length > 0) {
+                const logTable = [['Tanggal', 'Waktu', 'Shalat', 'Tanggal Qadha', 'Status']];
+                
+                recentLog.forEach(entry => {
+                    const date = new Date(entry.timestamp);
+                    const dateStr = date.toLocaleDateString('id-ID');
+                    const timeStr = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                    const prayerName = entry.prayer.charAt(0).toUpperCase() + entry.prayer.slice(1);
+                    const status = entry.action === 'completed' ? 'Selesai' : 'Belum Selesai';
+                    
+                    logTable.push([dateStr, timeStr, prayerName, entry.date, status]);
+                });
+                
+                doc.autoTable({
+                    head: [logTable[0]],
+                    body: logTable.slice(1),
+                    startY: doc.lastAutoTable.finalY + 40,
+                    theme: 'grid'
+                });
+            } else {
+                doc.setFontSize(12);
+                doc.text('Tidak ada aktivitas tercatat dalam 7 hari terakhir.', 14, doc.lastAutoTable.finalY + 45);
+            }
+            
+            // Simpan PDF
+            doc.save('laporan-qadha-shalat.pdf');
+        }
+        
+        // Fungsi untuk mengekspor data ke JSON
+        function exportToJSON() {
+            const dataToExport = {
+                prayerData: prayerData,
+                activityLog: activityLog
+            };
+            
+            createFileBackup(dataToExport);
+        }
+        
+        // Fungsi untuk mengimpor data dari JSON
+        async function importFromJSON() {
+            const fileInput = document.getElementById('importFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showAlert('error', 'Pilih file JSON untuk diimpor.');
+                return;
+            }
+            
+            const reader = new FileReader();
+            
+            reader.onload = async function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    // Validasi data
+                    if (!importedData.prayerData || !importedData.activityLog) {
+                        throw new Error('Format data tidak valid.');
+                    }
+                    
+                    // Konfirmasi sebelum menimpa data
+                    const confirmImport = confirm('Impor data akan menimpa semua data saat ini. Lanjutkan?');
+                    
+                    if (confirmImport) {
+                        // Impor data
+                        prayerData = importedData.prayerData;
+                        activityLog = importedData.activityLog;
+                        
+                        // Simpan ke IndexedDB dan localStorage
+                        await saveData();
+                        
+                        // Perbarui tampilan
+                        renderPrayerTable();
+                        updateStatistics();
+                        updateActivityLog();
+                        
+                        // Perbarui chart jika tab statistik lanjutan aktif
+                        if (document.getElementById('stats-tab').classList.contains('active')) {
+                            initPieChart();
+                            initBarChart();
+                        }
+                        
+                        // Tampilkan pesan sukses
+                        showAlert('success', 'Data berhasil diimpor!');
+                        
+                        // Reset form
+                        fileInput.value = '';
+                        document.getElementById('importContainer').style.display = 'none';
+                    }
+                } catch (error) {
+                    console.error('Error parsing JSON:', error);
+                    showAlert('error', 'Terjadi kesalahan saat mengimpor data. Pastikan format file benar.');
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        // Fungsi untuk menampilkan pesan alert
+        function showAlert(type, message) {
+            const successAlert = document.getElementById('successAlert');
+            const errorAlert = document.getElementById('errorAlert');
+            
+            if (type === 'success') {
+                successAlert.textContent = message;
+                successAlert.style.display = 'block';
+                
+                // Sembunyikan setelah 3 detik
+                setTimeout(() => {
+                    successAlert.style.display = 'none';
+                }, 3000);
+            } else {
+                errorAlert.textContent = message;
+                errorAlert.style.display = 'block';
+                
+                // Sembunyikan setelah 3 detik
+                setTimeout(() => {
+                    errorAlert.style.display = 'none';
+                }, 3000);
+            }
+        }
+        
+        // Fungsi untuk setup event listeners modal niat sholat qadha
+        function setupIntentionModalListeners() {
+            const modal = document.getElementById('intentionModal');
+            const openBtn = document.getElementById('showIntentionModal');
+            const closeBtn = document.getElementById('closeIntentionModal');
+            const intentionTabs = document.querySelectorAll('.intention-tab');
+            
+            // Buka modal
+            openBtn.addEventListener('click', function() {
+                modal.style.display = 'block';
+                document.body.style.overflow = 'hidden'; // Mencegah scroll body
+            });
+            
+            // Tutup modal
+            closeBtn.addEventListener('click', function() {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto'; // Kembalikan scroll body
+            });
+            
+            // Tutup modal saat klik di luar modal
+            window.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                    document.body.style.overflow = 'auto';
+                }
+            });
+            
+            // Tab niat sholat
+            intentionTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Hapus kelas active dari semua tab dan konten
+                    intentionTabs.forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.intention-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    
+                    // Tambahkan kelas active ke tab yang diklik
+                    this.classList.add('active');
+                    
+                    // Tampilkan konten yang sesuai
+                    const intentionType = this.dataset.intention;
+                    document.getElementById(intentionType + 'Intention').classList.add('active');
+                });
+            });
+        }
+        
+        // Modifikasi fungsi initializeApp untuk menambahkan inisialisasi IndexedDB
+        async function initializeApp() {
+            try {
+                // Inisialisasi IndexedDB
+                const dbInitialized = await initializeIndexedDB();
+                
+                if (!dbInitialized) {
+                    console.log("Using localStorage fallback");
+                }
+                
+                // Inisialisasi data
+                await initializePrayerData();
+                
+                // Muat log aktivitas
+                await loadActivityLog();
+                
+                // Render tabel
+                renderPrayerTable();
+                
+                // Perbarui statistik
+                updateStatistics();
+                
+                // Tambahkan event listener untuk filter
+                document.getElementById('applyFilters').addEventListener('click', applyFilters);
+                document.getElementById('resetFilters').addEventListener('click', resetFilters);
+                document.getElementById('searchInput').addEventListener('keyup', event => {
+                    if (event.key === 'Enter') {
+                        applyFilters();
+                    }
+                });
+                
+                // Tambahkan event listener untuk tombol refresh lokasi
+                document.getElementById('refreshLocation').addEventListener('click', getUserLocation);
+                
+                // Tambahkan event listener untuk tab
+                document.querySelectorAll('.tab-button').forEach(button => {
+                    button.addEventListener('click', handleTabClick);
+                });
+                
+                // Dapatkan lokasi pengguna dan waktu shalat
+                getUserLocation();
+                
+                // Tambahkan event listener untuk fitur ekspor dan impor
+                setupExportImportListeners();
+                
+                // Setup modal niat sholat qadha
+                setupIntentionModalListeners();
+                
+                // Tampilkan pesan selamat datang
+                showWelcomeMessage();
+            } catch (error) {
+                console.error("Error initializing app:", error);
+                alert("Terjadi kesalahan saat memuat aplikasi. Silakan coba muat ulang halaman.");
+            }
+        }
+        
+        // Fungsi untuk menampilkan pesan selamat datang
+        function showWelcomeMessage() {
+            // Cek apakah ini pertama kali user membuka aplikasi
+            const isFirstVisit = localStorage.getItem('isFirstVisit') !== 'false';
+            
+            if (isFirstVisit) {
+                alert("Selamat datang di Aplikasi Pelacak Qadha Shalat!\n\nKami sekarang menggunakan penyimpanan data yang lebih aman dengan IndexedDB dan backup otomatis.\n\nData Anda akan tetap tersimpan meskipun Anda menghapus browsing data. Kami juga membuat backup otomatis mingguan ke file JSON di komputer Anda.");
+                localStorage.setItem('isFirstVisit', 'false');
+            }
+        }
+        
+        // Modifikasi fungsi untuk memperbarui informasi database
+        async function updateDataInfo() {
+            // Update status database
+            const dbStatus = document.getElementById('dbStatus');
+            if (db) {
+                dbStatus.textContent = "Terhubung";
+                dbStatus.style.color = "var(--success)";
+            } else {
+                dbStatus.textContent = "Tidak terhubung (menggunakan localStorage)";
+                dbStatus.style.color = "var(--warning)";
+            }
+            
+            // Update tanggal backup terakhir
+            const lastBackupDate = document.getElementById('lastBackupDate');
+            const lastBackupStr = localStorage.getItem('lastFileBackup');
+            
+            if (lastBackupStr) {
+                const lastBackup = new Date(parseInt(lastBackupStr));
+                lastBackupDate.textContent = lastBackup.toLocaleDateString('id-ID', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } else {
+                lastBackupDate.textContent = "Belum pernah dibuat";
+            }
+        }
+        
+        // Fungsi untuk memperbarui daftar backup
+        async function updateBackupList() {
+            const backupList = document.getElementById('backupList');
+            
+            try {
+                // Ambil semua backup
+                const backups = await loadFromIndexedDB("backup", "all");
+                
+                if (!backups || backups.length === 0) {
+                    backupList.innerHTML = '<p>Belum ada backup yang tersimpan.</p>';
+                    return;
+                }
+                
+                // Urutkan berdasarkan timestamp (terbaru dulu)
+                backups.sort((a, b) => b.timestamp - a.timestamp);
+                
+                // Render daftar backup
+                backupList.innerHTML = '';
+                
+                backups.forEach(backup => {
+                    const backupDate = new Date(backup.timestamp);
+                    const backupItem = document.createElement('div');
+                    backupItem.className = 'backup-item';
+                    backupItem.style.padding = '10px';
+                    backupItem.style.borderBottom = '1px solid #ddd';
+                    backupItem.style.marginBottom = '5px';
+                    
+                    const dateStr = backupDate.toLocaleDateString('id-ID', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    const isAutoBackup = backup.id.includes('auto_backup');
+                    
+                    backupItem.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong>${isAutoBackup ? 'Backup Otomatis' : 'Backup Manual'}</strong><br>
+                                ${dateStr}
+                            </div>
+                            <div>
+                                <button class="btn btn-secondary restore-backup" data-id="${backup.id}" style="margin-right: 5px;">Pulihkan</button>
+                                <button class="btn btn-export export-backup" data-id="${backup.id}">Ekspor</button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    backupList.appendChild(backupItem);
+                });
+                
+                // Tambahkan event listener untuk tombol restore dan export
+                document.querySelectorAll('.restore-backup').forEach(button => {
+                    button.addEventListener('click', async function() {
+                        const backupId = this.dataset.id;
+                        await restoreFromBackup(backupId);
+                    });
+                });
+                
+                document.querySelectorAll('.export-backup').forEach(button => {
+                    button.addEventListener('click', async function() {
+                        const backupId = this.dataset.id;
+                        await exportBackup(backupId);
+                    });
+                });
+            } catch (error) {
+                console.error("Error updating backup list:", error);
+                backupList.innerHTML = '<p>Terjadi kesalahan saat memuat daftar backup.</p>';
+            }
+        }
+        
+        // Fungsi untuk memulihkan dari backup
+        async function restoreFromBackup(backupId) {
+            try {
+                // Ambil backup dari IndexedDB
+                const backup = await loadFromIndexedDB("backup", backupId);
+                
+                if (!backup) {
+                    showAlert('error', 'Backup tidak ditemukan.');
+                    return;
+                }
+                
+                // Konfirmasi sebelum memulihkan
+                const confirmRestore = confirm('Memulihkan dari backup akan menimpa semua data saat ini. Lanjutkan?');
+                
+                if (confirmRestore) {
+                    // Pulihkan data
+                    prayerData = backup.prayerData;
+                    activityLog = backup.activityLog;
+                    
+                    // Simpan ke IndexedDB dan localStorage
+                    await saveData();
+                    
+                    // Perbarui tampilan
+                    renderPrayerTable();
+                    updateStatistics();
+                    updateActivityLog();
+                    
+                    // Perbarui chart jika tab statistik lanjutan aktif
+                    if (document.getElementById('stats-tab').classList.contains('active')) {
+                        initPieChart();
+                        initBarChart();
+                    }
+                    
+                    // Tampilkan pesan sukses
+                    showAlert('success', 'Data berhasil dipulihkan dari backup!');
+                }
+            } catch (error) {
+                console.error("Error restoring from backup:", error);
+                showAlert('error', 'Terjadi kesalahan saat memulihkan dari backup.');
+            }
+        }
+        
+        // Fungsi untuk mengekspor backup
+        async function exportBackup(backupId) {
+            try {
+                // Ambil backup dari IndexedDB
+                const backup = await loadFromIndexedDB("backup", backupId);
+                
+                if (!backup) {
+                    showAlert('error', 'Backup tidak ditemukan.');
+                    return;
+                }
+                
+                // Ekspor backup ke file
+                await createFileBackup(backup);
+                
+                // Tampilkan pesan sukses
+                showAlert('success', 'Backup berhasil diekspor!');
+            } catch (error) {
+                console.error("Error exporting backup:", error);
+                showAlert('error', 'Terjadi kesalahan saat mengekspor backup.');
+            }
+        }
+        
+        // Jalankan aplikasi saat halaman dimuat
+        window.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html> 
